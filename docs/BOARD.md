@@ -24,18 +24,18 @@ A maker who thinks a referee check is wrong adds a row under **Referee questions
 
 | Id | Item | Status | Claimed |
 |---|---|---|---|
-| GR1-1 | Predictions in the lab's `lab/predictions/genret-GR1.md`, including what the stand-ins are on CPU | open | |
-| GR1-2 | Product-content embeddings and an RQ-VAE tokeniser; a sid map of the whole catalogue | open | |
-| GR1-3 | A seq2seq query-to-sid model trained on the fit split; constrained beam search over the sids that exist | open | |
-| GR1-4 | A development score on esci-sample (`python -m referee score`), and the command that writes the run file and sid map from a clean checkout | open | |
+| GR1-1 | Predictions in the lab's `lab/predictions/genret-GR1.md`, including what the stand-ins are on CPU | in review | researcher, 2026-11-13 |
+| GR1-2 | Product-content embeddings and an RQ-VAE tokeniser; a sid map of the whole catalogue | claimed | researcher, 2026-11-13 |
+| GR1-3 | A seq2seq query-to-sid model trained on the fit split; constrained beam search over the sids that exist | claimed | researcher, 2026-11-13 |
+| GR1-4 | A development score on esci-sample (`python -m referee score`), and the command that writes the run file and sid map from a clean checkout | claimed | researcher, 2026-11-13 |
 | GR1-5 | The Colab score of record (founder), then the reproduction (reproducer) | open | |
 
 ## GR2 · SID-LLM-style (researcher)
 
 | Id | Item | Status | Claimed |
 |---|---|---|---|
-| GR2-1 | Predictions in the lab's `lab/predictions/genret-GR2.md`, naming the ESCI signal that stands in for behavioural data | open | |
-| GR2-2 | 3 × 8,192 semantic ids; joint catalogue pre-training; multi-token prediction and a lightweight ranker | open | |
+| GR2-1 | Predictions in the lab's `lab/predictions/genret-GR2.md`, naming the ESCI signal that stands in for behavioural data | in review | researcher, 2026-11-13 |
+| GR2-2 | 3 × 8,192 semantic ids; joint catalogue pre-training; multi-token prediction and a lightweight ranker | claimed | researcher, 2026-11-13 |
 
 ## Referee questions
 
