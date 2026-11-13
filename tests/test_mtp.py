@@ -36,3 +36,9 @@ def test_last_hidden_takes_the_last_real_token():
     h = last_hidden(lm, ids, mask)
     full = lm(input_ids=ids[1:, :2], output_hidden_states=True).hidden_states[-1][0, -1]
     assert torch.allclose(h[1], full, atol=1e-5)
+
+
+def test_ranker_combine_is_per_query_minmax():
+    from genret.ranker import combine
+    s = combine([0.0, 5.0, 10.0], [-3.0, -1.0, -2.0], w_ranker=0.7)
+    assert abs(s[2] - (0.7 + 0.3 * 0.5)) < 1e-9 and abs(s[1] - (0.35 + 0.3)) < 1e-9 and s[0] == 0.0
