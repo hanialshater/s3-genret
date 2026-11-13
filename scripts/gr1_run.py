@@ -65,6 +65,7 @@ def main(argv=None):
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--out", required=True)
     ap.add_argument("--name", default="gr1")
+    ap.add_argument("--save-model", action="store_true")
     ap.add_argument("--label", default="development only, never a claim")
     a = ap.parse_args(argv)
     torch.manual_seed(a.seed)
@@ -116,7 +117,7 @@ def main(argv=None):
               "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "gr1.json").write_text(json.dumps(report, indent=1) + "\n")
     log(json.dumps({k: report[k] for k in ("n_queries", "own_top10_undecodable_share", "seconds")}))
-    if a.device.startswith("cuda"):
+    if a.save_model:
         torch.save(model.state_dict(), out / "model.pt")
 
 
