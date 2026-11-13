@@ -62,7 +62,9 @@ The founder holds the held-out queries and runs the Colab score of record.
 - **Development on CPU.** Use small models and esci-sample. `python -m referee fast` stays under 1 minute.
 - **Nothing large in git.** Data, checkpoints and run outputs stay out (`.gitignore`). A claim's run file is rebuilt
   from its commit by its command.
-- **Private.** This repository is private, and nothing from it is published without the founder's decision.
+- **Public.** This repository is public (the founder, 2026-11-13). It holds only code and results. Predictions,
+  reproductions, transcripts and the held-out manifest stay in the private lab repository. Nothing here states a
+  headline before it reproduces.
 - **No secrets and no personal data.**
 - **Times** are UTC, from `date -u`.
 
