@@ -1,0 +1,15 @@
+{
+ "about": "The search floor's referee that this referee reads ESCI through, pinned. Changed only by the evaluation steward, with the reason in the commit message and the baselines regenerated at the new commit (referee/README.md, 'Moving the pin').",
+ "repo": "https://github.com/hanialshater/s3-search",
+ "commit": "767397600d8932511be68c293a7829b021f9b3cb",
+ "commit_note": "s3-search main, 2026-11-13 (merge of PR #16); pinned by the evaluation steward 2026-11-13T23:13:40Z",
+ "files": {
+  "referee/loader.py": "7c8279c911f519a94492d40c0b38a40e226311b80d53a32c25ff11dedf1c3d3e",
+  "referee/metrics.py": "b17669989eca60b7e9808166af2a7f542b18413db40b931311cf8eba2ebf7907",
+  "referee/bench.py": "c565fab40c570699c452ce60e86ce1849137b19059f1e7732d4e3668d3bbce16",
+  "datasets/esci-sample.manifest.json": "64a37d30ae4e685e5aa263ca19e2e4ac4555ddd02f7403ff4645eed5373fd805",
+  "referee/requests/bm25f-tuned.json": "46c8b5432ac84fae8e442a2caed491fd21f93888ec396e3ec63a9a69ec26c372",
+  "referee/requests/bm25f-tuned.bm25.json": "d7affac28a409003d50c73877ae429b3a76d281922cf15ec1f2c0319ce1b4663",
+  "engine/encode.py": "129a3c88378046f451aa7b9bdb3a560b5860bc3956af6eadcef170f531cd19ce"
+ }
+}

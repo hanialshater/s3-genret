@@ -1,0 +1,181 @@
+{
+ "bm25f": {
+  "build_s": 13.070231519988738,
+  "device": "cpu",
+  "host": {
+   "cpus": 8,
+   "machine": "x86_64",
+   "python": "3.11.5",
+   "threads": {
+    "BLIS_NUM_THREADS": "8",
+    "MKL_NUM_THREADS": "8",
+    "NUMEXPR_NUM_THREADS": "8",
+    "OMP_NUM_THREADS": "8",
+    "OPENBLAS_NUM_THREADS": "8",
+    "VECLIB_MAXIMUM_THREADS": "8",
+    "cpus_in_affinity_mask": 8,
+    "numpy_loaded_before_pin": false
+   }
+  },
+  "latency_ms_p50_batch1": 7.841529528377578,
+  "mapping_meta_engine": {
+   "bm25": {
+    "b": 0.75,
+    "k1": 1.2
+   },
+   "hot": [],
+   "id_field": "product_id"
+  },
+  "n_queries": 500,
+  "request_template": {
+   "query": {
+    "multi_match": {
+     "fields": [
+      "product_title",
+      "product_brand",
+      "product_color",
+      "product_bullet_point",
+      "product_description"
+     ],
+     "query": "{{query}}"
+    }
+   }
+  },
+  "run_file": "bm25f.run.jsonl.gz",
+  "run_sha256": "63f3caa35f985cdc9c1ad59ae91b14494c5e555e4459c6082a0cf354ac6d4b7a",
+  "s3search_commit": "7673976",
+  "s3search_quality": {
+   "exact_recall@100": 0.7788364431238817,
+   "n_exact_recall@100": 500,
+   "n_ndcg@10": 500,
+   "ndcg@10": 0.4753216591604385
+  },
+  "system": "bm25f",
+  "wall_s": 22.72113389201695
+ },
+ "bm25f-tuned": {
+  "build_s": 12.697917196026538,
+  "device": "cpu",
+  "files": {
+   "referee/requests/bm25f-tuned.bm25.json": "d7affac28a409003d50c73877ae429b3a76d281922cf15ec1f2c0319ce1b4663",
+   "referee/requests/bm25f-tuned.json": "46c8b5432ac84fae8e442a2caed491fd21f93888ec396e3ec63a9a69ec26c372"
+  },
+  "host": {
+   "cpus": 8,
+   "machine": "x86_64",
+   "python": "3.11.5",
+   "threads": {
+    "BLIS_NUM_THREADS": "8",
+    "MKL_NUM_THREADS": "8",
+    "NUMEXPR_NUM_THREADS": "8",
+    "OMP_NUM_THREADS": "8",
+    "OPENBLAS_NUM_THREADS": "8",
+    "VECLIB_MAXIMUM_THREADS": "8",
+    "cpus_in_affinity_mask": 8,
+    "numpy_loaded_before_pin": false
+   }
+  },
+  "latency_ms_p50_batch1": 8.1310604873579,
+  "mapping_meta_engine": {
+   "bm25": {
+    "b": {
+     "product_brand": 0.675,
+     "product_bullet_point": 0.619,
+     "product_color": 0.475,
+     "product_description": 0.551,
+     "product_title": 0.742
+    },
+    "k1": 0.036
+   },
+   "hot": [],
+   "id_field": "product_id"
+  },
+  "n_queries": 500,
+  "request_template": {
+   "query": {
+    "multi_match": {
+     "fields": [
+      "product_title^1.0",
+      "product_brand^0.126",
+      "product_color^0.14",
+      "product_bullet_point^0.06",
+      "product_description^0.036"
+     ],
+     "query": "{{query}}"
+    }
+   }
+  },
+  "run_file": "bm25f-tuned.run.jsonl.gz",
+  "run_sha256": "ca903f6a84a08eba4fb3f0245e2df9fcdc388aa108a1ab28d77301aea6675439",
+  "s3search_commit": "7673976",
+  "s3search_quality": {
+   "exact_recall@100": 0.798196926015953,
+   "n_exact_recall@100": 500,
+   "n_ndcg@10": 500,
+   "ndcg@10": 0.5143918676840007
+  },
+  "system": "bm25f-tuned",
+  "wall_s": 22.018052782979794
+ },
+ "dense-tfidf-svd-128": {
+  "build_s": 26.84261928201886,
+  "device": "cpu",
+  "host": {
+   "cpus": 8,
+   "machine": "x86_64",
+   "python": "3.11.5",
+   "threads": {
+    "BLIS_NUM_THREADS": "8",
+    "MKL_NUM_THREADS": "8",
+    "NUMEXPR_NUM_THREADS": "8",
+    "OMP_NUM_THREADS": "8",
+    "OPENBLAS_NUM_THREADS": "8",
+    "VECLIB_MAXIMUM_THREADS": "8",
+    "cpus_in_affinity_mask": 8,
+    "numpy_loaded_before_pin": false
+   }
+  },
+  "latency_ms_p50_batch1": 22.135509527288377,
+  "mapping_meta_engine": {
+   "bm25": {
+    "b": 0.75,
+    "k1": 1.2
+   },
+   "embeddings": {
+    "embedding": {
+     "fit": "numpy",
+     "inputs": [
+      "product_title",
+      "product_brand",
+      "product_color"
+     ],
+     "model": "tfidf-svd-128"
+    }
+   },
+   "hot": [],
+   "id_field": "product_id"
+  },
+  "n_queries": 500,
+  "request_template": {
+   "query": {
+    "neural": {
+     "embedding": {
+      "k": 100,
+      "query_text": "{{query}}"
+     }
+    }
+   }
+  },
+  "run_file": "dense-tfidf-svd-128.run.jsonl.gz",
+  "run_sha256": "898531d09bd9e0225d45f5239c5249f7c17d20a59ecfbba64b8e42750b83240b",
+  "s3search_commit": "7673976",
+  "s3search_quality": {
+   "exact_recall@100": 0.3624306883524444,
+   "n_exact_recall@100": 500,
+   "n_ndcg@10": 500,
+   "ndcg@10": 0.17319816437745417
+  },
+  "system": "dense-tfidf-svd-128",
+  "wall_s": 37.637756778043695
+ }
+}
