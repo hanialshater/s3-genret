@@ -1,0 +1,38 @@
+# Floor 3's visible referee on every pull request: the pin, the unit tests with their planted errors, and a guard
+# that a change to referee/ comes from a steward branch. No data is fetched here (the drift check runs where
+# esci-sample is built: `python -m referee fast` locally and in the founder's Colab).
+name: referee
+
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Only the steward changes referee/ (P6)
+        if: github.event_name == 'pull_request'
+        run: |
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- referee/ CLAUDE.md)
+          if [ -n "$changed" ] && [[ "${{ github.head_ref }}" != steward/* ]]; then
+            echo "This pull request changes the referee or CLAUDE.md from ${{ github.head_ref }}:"
+            echo "$changed"
+            echo "Only the evaluation steward changes them, from a steward/ branch. Raise it on docs/BOARD.md."
+            exit 1
+          fi
+      - name: Referee fast
+        run: |
+          python -m pip install -q -r referee/requirements.txt
+          python -m referee setup --no-data
+          python -m referee fast

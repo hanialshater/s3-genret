@@ -1,0 +1,10 @@
+# Data, the pinned s3-search checkout, environments and run outputs never enter the repository.
+.cache/
+data/
+.venv/
+__pycache__/
+*.pyc
+results.json
+results-dev.json
+baselines-esci-us/
+checkpoints/
