@@ -32,10 +32,15 @@ class RQVAE(nn.Module):
         self.levels, self.k, self.beta = levels, k, beta
         self.codebooks = nn.ParameterList([nn.Parameter(torch.randn(k, latent) * 0.01) for _ in range(levels)])
         self.initialised = False
+        self.register_buffer("mu", torch.zeros(in_dim))
+        self.register_buffer("sd", torch.ones(in_dim))
+
+    def norm(self, x):
+        return (x - self.mu) / self.sd
 
     @torch.no_grad()
     def kmeans_init(self, x):
-        r = self.encoder(x)
+        r = self.encoder(self.norm(x))
         for l in range(self.levels):
             c, a = kmeans(r, self.k, iters=10, seed=l)
             self.codebooks[l].data.copy_(c)
@@ -55,30 +60,39 @@ class RQVAE(nn.Module):
         return zq, torch.stack(codes, 1), closs
 
     def forward(self, x):
+        x = self.norm(x)
         z = self.encoder(x)
         zq, codes, closs = self.quantize(z)
         zq_st = z + (zq - z).detach()                # straight-through
         xh = self.decoder(zq_st)
-        rec = F.mse_loss(xh, x)
+        rec = F.mse_loss(xh, x)                      # in the (possibly standardised) input space
         return xh, codes, rec, closs
 
     @torch.no_grad()
     def encode(self, x, batch=65536):
         out = []
         for s in range(0, x.shape[0], batch):
-            out.append(self.quantize(self.encoder(x[s:s + batch]))[1])
+            out.append(self.quantize(self.encoder(self.norm(x[s:s + batch])))[1])
         return torch.cat(out)
 
 
 def train_rqvae(x: np.ndarray, steps: int = 3000, batch: int = 1024, lr: float = 0.4, k: int = 256, levels: int = 3,
-                seed: int = 0, device: str = "cpu", dead_code_reset: bool = False, log_every: int = 500, log=print):
+                seed: int = 0, device: str = "cpu", dead_code_reset: bool = False, log_every: int = 500, log=print,
+                optimizer: str = "adagrad", standardize: bool = False):
+    """standardize: scale inputs to zero mean, unit variance per dimension (unit-norm sentence embeddings have a
+    per-dimension variance near 1/768, which makes the reconstruction term tiny next to the commitment terms)."""
     torch.manual_seed(seed)
     X = torch.as_tensor(x, dtype=torch.float32, device=device)
+
     m = RQVAE(in_dim=X.shape[1], levels=levels, k=k).to(device)
+    if standardize:
+        m.mu.copy_(X.mean(0))
+        m.sd.copy_(X.std(0).clamp(min=1e-6))
     g = torch.Generator(device="cpu").manual_seed(seed)
     first = X[torch.randperm(X.shape[0], generator=g)[:max(batch, 4 * k)].to(device)]
     m.kmeans_init(first)
-    opt = torch.optim.Adagrad(m.parameters(), lr=lr)
+    opt = (torch.optim.Adagrad(m.parameters(), lr=lr) if optimizer == "adagrad"
+           else torch.optim.AdamW(m.parameters(), lr=lr))
     hist = []
     for step in range(1, steps + 1):
         idx = torch.randint(0, X.shape[0], (batch,), generator=g).to(device)
@@ -90,7 +104,7 @@ def train_rqvae(x: np.ndarray, steps: int = 3000, batch: int = 1024, lr: float =
         opt.step()
         if dead_code_reset and step % 200 == 0:
             with torch.no_grad():
-                z = m.encoder(xb)
+                z = m.encoder(m.norm(xb))
                 r = z
                 for l, cb in enumerate(m.codebooks):
                     used = torch.bincount(codes[:, l], minlength=k) > 0

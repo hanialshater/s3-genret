@@ -39,6 +39,9 @@ def main(argv=None):
     ap.add_argument("--steps", type=int, default=3000, help="RQ-VAE steps")
     ap.add_argument("--iters", type=int, default=20, help="k-means iterations per level")
     ap.add_argument("--dead-code-reset", action="store_true")
+    ap.add_argument("--optimizer", choices=("adagrad", "adamw"), default="adagrad")
+    ap.add_argument("--lr", type=float, default=0.4, help="RQ-VAE lr (TIGER: Adagrad 0.4)")
+    ap.add_argument("--standardize", action="store_true", help="RQ-VAE: per-dimension standardised inputs")
     ap.add_argument("--dedup", action="store_true", help="rqkmeans: append TIGER's 4th code (GR1 arm A5)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--batch-size", type=int, default=128, help="encoder batch")
@@ -65,11 +68,12 @@ def main(argv=None):
     hist = []
     if a.scheme == "rqvae":
         model, hist = train_rqvae(emb, steps=a.steps, k=a.k, levels=a.levels, seed=a.seed, device=a.device,
-                                  dead_code_reset=a.dead_code_reset, log=log)
+                                  dead_code_reset=a.dead_code_reset, log=log,
+                                  optimizer=a.optimizer, lr=a.lr, standardize=a.standardize)
         codes = model.encode(torch.as_tensor(emb, device=a.device)).cpu().numpy()
         with torch.no_grad():
             X = torch.as_tensor(emb, device=a.device)
-            rec = float(sum(torch.nn.functional.mse_loss(model(X[s:s + 65536])[0], X[s:s + 65536],
+            rec = float(sum(torch.nn.functional.mse_loss(model(X[s:s + 65536])[0], model.norm(X[s:s + 65536]),
                                                          reduction="sum") for s in range(0, len(X), 65536))
                         / X.numel())
         torch.save(model.state_dict(), out / "rqvae.pt")
@@ -91,7 +95,9 @@ def main(argv=None):
     report = {"label": a.label, "dataset": a.dataset, "encoder": a.encoder, "scheme": a.scheme, "k": a.k,
               "levels": a.levels, "sid_levels": a.levels, "sid_length": int(full.shape[1]),
               "max_suffix": int(full[:, -1].max()) if full.shape[1] > a.levels else None,
-              "steps": a.steps if a.scheme == "rqvae" else None, "iters": a.iters if a.scheme == "rqkmeans" else None,
+              "steps": a.steps if a.scheme == "rqvae" else None,
+              "rqvae": {"optimizer": a.optimizer, "lr": a.lr, "standardize": a.standardize,
+                        "dead_code_reset": a.dead_code_reset} if a.scheme == "rqvae" else None, "iters": a.iters if a.scheme == "rqkmeans" else None,
               "seed": a.seed, "device": a.device, "n_products": len(ids), "emb_dim": int(emb.shape[1]),
               "reconstruction_mse_per_dim": rec, "collisions": stats, "rqvae_history": hist,
               "seconds": {"embed": round(t_emb, 1), "tokenise": round(t_tok, 1)}, "commit": commit,
