@@ -184,15 +184,28 @@ def train_lm(model, examples, steps: int, batch: int, lr: float, device: str, pa
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda s: min(1.0, (s + 1) / warmup) if s < stable_end else max(0.0, (steps - s) / max(1, steps - stable_end)))
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
-    order = list(range(len(examples)))
-    random.Random(0).shuffle(order)
-    cur, t0, hist = 0, time.time(), []
+    lens = np.fromiter((len(x) for x, _ in examples), dtype=np.int32, count=len(examples))
+
+    def epoch_batches(seed):
+        """Shuffled, then length-sorted inside windows of 64 batches, then the batches shuffled: little padding."""
+        r = np.random.default_rng(seed)
+        order = r.permutation(len(examples))
+        w = batch * 64
+        out = []
+        for s0 in range(0, len(order) - batch + 1, w):
+            chunk = order[s0:s0 + w]
+            chunk = chunk[np.argsort(lens[chunk], kind="stable")]
+            out += [chunk[i:i + batch] for i in range(0, len(chunk) - batch + 1, batch)]
+        r.shuffle(out)
+        return out
+
+    batches, bi, ep, t0, hist = epoch_batches(0), 0, 0, time.time(), []
     for step in range(1, steps + 1):
-        if cur + batch > len(order):
-            random.Random(step).shuffle(order)
-            cur = 0
-        b = [examples[i] for i in order[cur:cur + batch]]
-        cur += batch
+        if bi >= len(batches):
+            ep += 1
+            batches, bi = epoch_batches(ep), 0
+        b = [examples[i] for i in batches[bi]]
+        bi += 1
         ids, mask, labels = collate(b, pad, max_len)
         with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
             loss = lm_loss(model, ids.to(device), mask.to(device), labels.to(device))
