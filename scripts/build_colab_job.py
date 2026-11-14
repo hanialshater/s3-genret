@@ -1,7 +1,8 @@
 """Build a self-contained Colab job that runs commands on a clean copy of this repository at a commit.
 
-The repository is private, so the job carries `git archive <commit>` as a base64 tarball (no credential on the VM).
-On the VM it unpacks to /content/s3-genret, runs `python -m referee setup` (s3-search at the pinned commit, ESCI,
+The VM clones the public repository at the commit's full SHA (the commit must be pushed). `--tarball` instead
+carries `git archive <commit>` inside the job (the private-repo fallback). On the VM the code is at /content/s3-genret;
+the job runs `python -m referee setup` (s3-search at the pinned commit, ESCI,
 esci-sample), installs the pinned extras, runs each `--cmd` in order from the repository root, and tars `--collect`
 into /content/job-out.tar.gz.
 
@@ -28,8 +29,16 @@ def sh(cmd, **kw):
     print("$", cmd if isinstance(cmd, str) else " ".join(cmd), flush=True)
     subprocess.run(cmd, check=True, shell=isinstance(cmd, str), **kw)
 code = "/content/s3-genret"
-os.makedirs(code, exist_ok=True)
-tarfile.open(fileobj=io.BytesIO(base64.b64decode(PAYLOAD)), mode="r:gz").extractall(code)
+if PAYLOAD:
+    os.makedirs(code, exist_ok=True)
+    tarfile.open(fileobj=io.BytesIO(base64.b64decode(PAYLOAD)), mode="r:gz").extractall(code)
+else:
+    sh(["git", "clone", "--quiet", "https://github.com/hanialshater/s3-genret.git", code])
+    sh(["git", "-C", code, "checkout", "--quiet", SPEC["commit"]])
+for remote, b64 in SPEC.get("attach", {}).items():
+    os.makedirs(os.path.dirname(remote), exist_ok=True)
+    open(remote, "wb").write(base64.b64decode(b64))
+    print("attached", remote, flush=True)
 sh([sys.executable, "-m", "pip", "install", "--quiet"] + SPEC["pip"])
 env = dict(os.environ, PYTHONPATH=code, GENRET_DATA="/content/data", TF_CPP_MIN_LOG_LEVEL="3", USE_TF="0")
 sh([sys.executable, "-m", "referee", "setup"], cwd=code, env=env)
@@ -51,15 +60,29 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--cmd", action="append", required=True)
     ap.add_argument("--collect", action="append", default=[])
+    ap.add_argument("--attach", action="append", default=[], metavar="LOCAL:REMOTE",
+                    help="a small local file (a sid map) carried inside the job and written to REMOTE on the VM")
+    ap.add_argument("--tarball", action="store_true", help="carry the code inside the job instead of cloning")
     a = ap.parse_args()
     sha = subprocess.check_output(["git", "rev-parse", a.commit], cwd=ROOT, text=True).strip()
-    tar = subprocess.check_output(["git", "archive", "--format=tar.gz", sha], cwd=ROOT)
-    spec = {"commit": sha, "cmds": a.cmd, "collect": a.collect, "pip": PIP}
+    if a.tarball:
+        tar = subprocess.check_output(["git", "archive", "--format=tar.gz", sha], cwd=ROOT)
+    else:
+        tar = b""
+        subprocess.check_call(["git", "fetch", "-q", "origin"], cwd=ROOT)
+        on_remote = subprocess.run(["git", "branch", "-r", "--contains", sha], cwd=ROOT, capture_output=True, text=True)
+        if not on_remote.stdout.strip():
+            raise SystemExit(f"{sha} is not on any remote branch; push it first (the VM clones it)")
+    attach = {}
+    for item in a.attach:
+        local, remote = item.split(":", 1)
+        attach[remote] = base64.b64encode(Path(local).read_bytes()).decode()
+    spec = {"commit": sha, "cmds": a.cmd, "collect": a.collect, "pip": PIP, "attach": attach}
     body = JOB.replace("SPEC = json.loads(SPEC_JSON)", f"SPEC = json.loads({json.dumps(json.dumps(spec))})")
     body = body.replace("T0 = time.time()", f"T0 = time.time()\nPAYLOAD = \"{base64.b64encode(tar).decode()}\"", 1)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(body)
-    print(f"wrote {a.out} (commit {sha[:12]}, {len(tar)} bytes packed)")
+    print(f"wrote {a.out} (commit {sha[:12]}, {'tarball ' + str(len(tar)) + ' bytes' if tar else 'clone'})")
 
 
 if __name__ == "__main__":
