@@ -86,3 +86,22 @@ def test_constrained_beam_returns_only_real_ids_in_score_order():
     assert (sc[0][:-1] >= sc[0][1:]).all()
     free, _ = beam_search(step, None, batch=1, depth=3, ks=[4, 4, 4], width=8, unconstrained=True)
     assert any(tuple(r.tolist()) not in real for r in free[0])
+
+
+def test_deterministic_centroid_sums_match_index_add_and_repeat():
+    from genret.kmeans import centroid_sums
+    g = torch.Generator().manual_seed(0)
+    x = torch.randn(5000, 40, generator=g)
+    a = torch.randint(0, 37, (5000,), generator=g)
+    a[a == 5] = 6                                         # an empty cluster
+    ref = torch.zeros(37, 40).index_add_(0, a, x)
+    got = centroid_sums(x, a, 37, deterministic=True, dim_chunk=16)
+    assert torch.allclose(got, ref, atol=1e-4) and got[5].abs().sum() == 0
+    assert torch.equal(got, centroid_sums(x[torch.arange(5000)], a, 37, deterministic=True, dim_chunk=16))
+
+
+def test_rqkmeans_same_seed_gives_identical_codes():
+    x = _blobs(n=900, d=16, k=8)
+    c1 = RQKMeans(levels=3, k=16, iters=8, seed=3).fit(x).encode(x)
+    c2 = RQKMeans(levels=3, k=16, iters=8, seed=3).fit(x).encode(x)
+    assert (c1 == c2).all()
