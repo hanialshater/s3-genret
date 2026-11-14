@@ -42,6 +42,8 @@ def main(argv=None):
     ap.add_argument("--optimizer", choices=("adagrad", "adamw"), default="adagrad")
     ap.add_argument("--lr", type=float, default=0.4, help="RQ-VAE lr (TIGER: Adagrad 0.4)")
     ap.add_argument("--standardize", action="store_true", help="RQ-VAE: per-dimension standardised inputs")
+    ap.add_argument("--nondeterministic-kmeans", action="store_true",
+                    help="the pre-2026-11-14 index_add_ update (reproduces nothing; for comparison only)")
     ap.add_argument("--dedup", action="store_true", help="rqkmeans: append TIGER's 4th code (GR1 arm A5)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--batch-size", type=int, default=128, help="encoder batch")
@@ -52,6 +54,10 @@ def main(argv=None):
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    if not a.nondeterministic_kmeans:
+        import os
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")      # deterministic cuBLAS (embeddings, k-means)
+        torch.use_deterministic_algorithms(True, warn_only=True)
     t0 = time.time()
     log = lambda m: print(f"[{time.time() - t0:7.1f}s] {m}", flush=True)  # noqa: E731
 
@@ -79,7 +85,8 @@ def main(argv=None):
         torch.save(model.state_dict(), out / "rqvae.pt")
         full = dedup_suffix(codes, ids)
     else:
-        q = RQKMeans(levels=a.levels, k=a.k, iters=a.iters, seed=a.seed, device=a.device).fit(emb)
+        q = RQKMeans(levels=a.levels, k=a.k, iters=a.iters, seed=a.seed, device=a.device,
+                     deterministic=not a.nondeterministic_kmeans).fit(emb)
         codes = q.encode(emb)
         rec = float(((emb - q.reconstruct(codes)) ** 2).mean())
         torch.save(q.state_dict(), out / "rqkmeans.pt")
@@ -87,6 +94,8 @@ def main(argv=None):
     t_tok = time.time() - t0 - t_emb
     stats = collision_stats(full, levels=a.levels)
     write_sid_map(out / "sid_map.tsv.gz", ids, full)
+    import hashlib
+    sid_sha = hashlib.sha256((out / "sid_map.tsv.gz").read_bytes()).hexdigest()
     try:
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True,
                                          cwd=Path(__file__).resolve().parent).strip()
@@ -98,8 +107,8 @@ def main(argv=None):
               "steps": a.steps if a.scheme == "rqvae" else None,
               "rqvae": {"optimizer": a.optimizer, "lr": a.lr, "standardize": a.standardize,
                         "dead_code_reset": a.dead_code_reset} if a.scheme == "rqvae" else None, "iters": a.iters if a.scheme == "rqkmeans" else None,
-              "seed": a.seed, "device": a.device, "n_products": len(ids), "emb_dim": int(emb.shape[1]),
-              "reconstruction_mse_per_dim": rec, "collisions": stats, "rqvae_history": hist,
+              "seed": a.seed, "device": a.device, "deterministic_kmeans": not a.nondeterministic_kmeans, "n_products": len(ids), "emb_dim": int(emb.shape[1]),
+              "reconstruction_mse_per_dim": rec, "collisions": stats, "sid_map_sha256": sid_sha, "rqvae_history": hist,
               "seconds": {"embed": round(t_emb, 1), "tokenise": round(t_tok, 1)}, "commit": commit,
               "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "tokenise.json").write_text(json.dumps(report, indent=1) + "\n")

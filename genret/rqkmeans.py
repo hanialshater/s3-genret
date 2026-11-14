@@ -12,17 +12,18 @@ from genret.kmeans import _assign, kmeans
 
 
 class RQKMeans:
-    def __init__(self, levels: int = 3, k=8192, iters: int = 20, seed: int = 0, device: str = "cpu"):
+    def __init__(self, levels: int = 3, k=8192, iters: int = 20, seed: int = 0, device: str = "cpu",
+                 deterministic: bool = True):
         self.levels = levels
         self.ks = list(k) if isinstance(k, (list, tuple)) else [k] * levels
-        self.iters, self.seed, self.device = iters, seed, device
+        self.iters, self.seed, self.device, self.deterministic = iters, seed, device, deterministic
         self.codebooks = []
 
     def fit(self, x: np.ndarray):
         r = torch.as_tensor(x, dtype=torch.float32, device=self.device)
         self.codebooks = []
         for l, k in enumerate(self.ks):
-            c, a = kmeans(r, k, iters=self.iters, seed=self.seed + l)
+            c, a = kmeans(r, k, iters=self.iters, seed=self.seed + l, deterministic=self.deterministic)
             self.codebooks.append(c)
             r = r - c[a]
         return self
