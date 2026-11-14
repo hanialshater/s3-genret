@@ -1,0 +1,306 @@
+{
+ "created": "2026-11-13T23:56:26Z",
+ "dataset": "esci-us",
+ "k": 1000,
+ "kind": "genret-baselines",
+ "label": "baselines for the score of record (esci-us)",
+ "s3search": {
+  "checkout": "/content/s3-genret/.cache/s3-search",
+  "commit": "767397600d8932511be68c293a7829b021f9b3cb",
+  "files_verified": [
+   "datasets/esci-sample.manifest.json",
+   "engine/encode.py",
+   "referee/bench.py",
+   "referee/loader.py",
+   "referee/metrics.py",
+   "referee/requests/bm25f-tuned.bm25.json",
+   "referee/requests/bm25f-tuned.json"
+  ],
+  "repo": "https://github.com/hanialshater/s3-search"
+ },
+ "sample_manifest_sha256": "64a37d30ae4e685e5aa263ca19e2e4ac4555ddd02f7403ff4645eed5373fd805",
+ "split": "test",
+ "systems": {
+  "bm25f": {
+   "build_s": 133.52060703400002,
+   "device": "cuda",
+   "floors_agree": true,
+   "genret_score": {
+    "genret": {
+     "duplicate_share": 0.0,
+     "invalid_by_kind": {
+      "ambiguous": 0,
+      "inconsistent": 0,
+      "undecodable": 0,
+      "unknown_product": 0,
+      "unknown_sid": 0
+     },
+     "invalid_share": 0.0,
+     "mean_valid_per_query": 963.6871371147834,
+     "n_entries": 8630782,
+     "shared_sid_hit_share": 0.0,
+     "short_list_share": {
+      "<10": 0.012393925859758822,
+      "<100": 0.0241179097811523,
+      "<1000": 0.04656096471639125
+     }
+    },
+    "quality": {
+     "exact_recall@10": 0.23107903795789986,
+     "exact_recall@100": 0.4834078242312528,
+     "exact_recall@1000": 0.7128273712606739,
+     "n_exact_recall@10": 8955,
+     "n_exact_recall@100": 8955,
+     "n_exact_recall@1000": 8955,
+     "n_ndcg@10": 8956,
+     "ndcg@10": 0.24870541368452267
+    }
+   },
+   "host": {
+    "cpus": 12,
+    "machine": "x86_64",
+    "python": "3.13.16",
+    "threads": {
+     "BLIS_NUM_THREADS": "12",
+     "MKL_NUM_THREADS": "12",
+     "NUMEXPR_NUM_THREADS": "12",
+     "OMP_NUM_THREADS": "12",
+     "OPENBLAS_NUM_THREADS": "12",
+     "VECLIB_MAXIMUM_THREADS": "12",
+     "cpus_in_affinity_mask": 12,
+     "numpy_loaded_before_pin": false
+    }
+   },
+   "latency_ms_p50_batch1": 4.245151500072097,
+   "mapping_meta_engine": {
+    "bm25": {
+     "b": 0.75,
+     "k1": 1.2
+    },
+    "hot": [],
+    "id_field": "product_id"
+   },
+   "n_queries": 8956,
+   "request_template": {
+    "query": {
+     "multi_match": {
+      "fields": [
+       "product_title",
+       "product_brand",
+       "product_color",
+       "product_bullet_point",
+       "product_description"
+      ],
+      "query": "{{query}}"
+     }
+    }
+   },
+   "run_file": "bm25f.run.jsonl.gz",
+   "run_sha256": "dc58ce16cc4bf36ef3aab9bf1002a5c7096a64f265bc7234733c68dd13236fed",
+   "s3search_commit": "7673976",
+   "s3search_quality": {
+    "exact_recall@100": 0.4834078242312528,
+    "exact_recall@1000": 0.7128273712606739,
+    "n_exact_recall@100": 8955,
+    "n_exact_recall@1000": 8955,
+    "n_ndcg@10": 8956,
+    "ndcg@10": 0.24870541368452267
+   },
+   "system": "bm25f",
+   "wall_s": 274.1823092730001
+  },
+  "bm25f-tuned": {
+   "build_s": 133.12278044599998,
+   "device": "cuda",
+   "files": {
+    "referee/requests/bm25f-tuned.bm25.json": "d7affac28a409003d50c73877ae429b3a76d281922cf15ec1f2c0319ce1b4663",
+    "referee/requests/bm25f-tuned.json": "46c8b5432ac84fae8e442a2caed491fd21f93888ec396e3ec63a9a69ec26c372"
+   },
+   "floors_agree": true,
+   "genret_score": {
+    "genret": {
+     "duplicate_share": 0.0,
+     "invalid_by_kind": {
+      "ambiguous": 0,
+      "inconsistent": 0,
+      "undecodable": 0,
+      "unknown_product": 0,
+      "unknown_sid": 0
+     },
+     "invalid_share": 0.0,
+     "mean_valid_per_query": 963.6871371147834,
+     "n_entries": 8630782,
+     "shared_sid_hit_share": 0.0,
+     "short_list_share": {
+      "<10": 0.012393925859758822,
+      "<100": 0.0241179097811523,
+      "<1000": 0.04656096471639125
+     }
+    },
+    "quality": {
+     "exact_recall@10": 0.2801804250662576,
+     "exact_recall@100": 0.5337671345373552,
+     "exact_recall@1000": 0.7415525795961351,
+     "n_exact_recall@10": 8955,
+     "n_exact_recall@100": 8955,
+     "n_exact_recall@1000": 8955,
+     "n_ndcg@10": 8956,
+     "ndcg@10": 0.3039127040512092
+    }
+   },
+   "host": {
+    "cpus": 12,
+    "machine": "x86_64",
+    "python": "3.13.16",
+    "threads": {
+     "BLIS_NUM_THREADS": "12",
+     "MKL_NUM_THREADS": "12",
+     "NUMEXPR_NUM_THREADS": "12",
+     "OMP_NUM_THREADS": "12",
+     "OPENBLAS_NUM_THREADS": "12",
+     "VECLIB_MAXIMUM_THREADS": "12",
+     "cpus_in_affinity_mask": 12,
+     "numpy_loaded_before_pin": false
+    }
+   },
+   "latency_ms_p50_batch1": 4.286903000320308,
+   "mapping_meta_engine": {
+    "bm25": {
+     "b": {
+      "product_brand": 0.675,
+      "product_bullet_point": 0.619,
+      "product_color": 0.475,
+      "product_description": 0.551,
+      "product_title": 0.742
+     },
+     "k1": 0.036
+    },
+    "hot": [],
+    "id_field": "product_id"
+   },
+   "n_queries": 8956,
+   "request_template": {
+    "query": {
+     "multi_match": {
+      "fields": [
+       "product_title^1.0",
+       "product_brand^0.126",
+       "product_color^0.14",
+       "product_bullet_point^0.06",
+       "product_description^0.036"
+      ],
+      "query": "{{query}}"
+     }
+    }
+   },
+   "run_file": "bm25f-tuned.run.jsonl.gz",
+   "run_sha256": "900a48e2d612d8e3e8187b1565eebeed6018f9e367582996f6427675395f9f8f",
+   "s3search_commit": "7673976",
+   "s3search_quality": {
+    "exact_recall@100": 0.5337671345373552,
+    "exact_recall@1000": 0.7415525795961351,
+    "n_exact_recall@100": 8955,
+    "n_exact_recall@1000": 8955,
+    "n_ndcg@10": 8956,
+    "ndcg@10": 0.3039127040512092
+   },
+   "system": "bm25f-tuned",
+   "wall_s": 274.039237683
+  },
+  "dense-tfidf-svd-128": {
+   "build_s": 406.40816346299925,
+   "device": "cuda",
+   "floors_agree": true,
+   "genret_score": {
+    "genret": {
+     "duplicate_share": 0.0,
+     "invalid_by_kind": {
+      "ambiguous": 0,
+      "inconsistent": 0,
+      "undecodable": 0,
+      "unknown_product": 0,
+      "unknown_sid": 0
+     },
+     "invalid_share": 0.0,
+     "mean_valid_per_query": 1000.0,
+     "n_entries": 8956000,
+     "shared_sid_hit_share": 0.0,
+     "short_list_share": {
+      "<10": 0.0,
+      "<100": 0.0,
+      "<1000": 0.0
+     }
+    },
+    "quality": {
+     "exact_recall@10": 0.027587286979579014,
+     "exact_recall@100": 0.07539321774924097,
+     "exact_recall@1000": 0.2017706448894078,
+     "n_exact_recall@10": 8955,
+     "n_exact_recall@100": 8955,
+     "n_exact_recall@1000": 8955,
+     "n_ndcg@10": 8956,
+     "ndcg@10": 0.03231224096451622
+    }
+   },
+   "host": {
+    "cpus": 12,
+    "machine": "x86_64",
+    "python": "3.13.16",
+    "threads": {
+     "BLIS_NUM_THREADS": "12",
+     "MKL_NUM_THREADS": "12",
+     "NUMEXPR_NUM_THREADS": "12",
+     "OMP_NUM_THREADS": "12",
+     "OPENBLAS_NUM_THREADS": "12",
+     "VECLIB_MAXIMUM_THREADS": "12",
+     "cpus_in_affinity_mask": 12,
+     "numpy_loaded_before_pin": false
+    }
+   },
+   "latency_ms_p50_batch1": 14.626798000335839,
+   "mapping_meta_engine": {
+    "bm25": {
+     "b": 0.75,
+     "k1": 1.2
+    },
+    "embeddings": {
+     "embedding": {
+      "fit": "numpy",
+      "inputs": [
+       "product_title",
+       "product_brand",
+       "product_color"
+      ],
+      "model": "tfidf-svd-128"
+     }
+    },
+    "hot": [],
+    "id_field": "product_id"
+   },
+   "n_queries": 8956,
+   "request_template": {
+    "query": {
+     "neural": {
+      "embedding": {
+       "k": 1000,
+       "query_text": "{{query}}"
+      }
+     }
+    }
+   },
+   "run_file": "dense-tfidf-svd-128.run.jsonl.gz",
+   "run_sha256": "7675d8f828c763d2d8b28072853b6ecf2b3ff169d987e49515c370783006c827",
+   "s3search_commit": "7673976",
+   "s3search_quality": {
+    "exact_recall@100": 0.07539321774924097,
+    "exact_recall@1000": 0.2017706448894078,
+    "n_exact_recall@100": 8955,
+    "n_exact_recall@1000": 8955,
+    "n_ndcg@10": 8956,
+    "ndcg@10": 0.03231224096451622
+   },
+   "system": "dense-tfidf-svd-128",
+   "wall_s": 566.5287420579998
+  }
+ }
+}
