@@ -1,0 +1,169 @@
+{
+ "kind": "full",
+ "device": "cuda",
+ "devices": [
+  "cpu",
+  "torch-cpu",
+  "cuda"
+ ],
+ "engine": "engine",
+ "runtime": {
+  "gpus": [
+   {
+    "name": "NVIDIA L4",
+    "driver": "580.82.07",
+    "memory": "23034 MiB"
+   }
+  ],
+  "gpu": "NVIDIA L4",
+  "gpu_slug": "l4",
+  "driver": "580.82.07",
+  "cuda_driver_api": "13.0",
+  "torch_cuda": "13.0",
+  "rapids": {
+   "cuml-cu13": "26.6.0",
+   "cuvs-cu13": "26.6.0",
+   "libcuvs-cu13": "26.6.0",
+   "cupy-cuda13x": "14.0.1",
+   "rmm-cu13": "26.6.0",
+   "librmm-cu13": "26.6.0",
+   "cudf-cu13": "26.6.0",
+   "pylibraft-cu13": "26.6.0",
+   "raft-dask-cu13": "26.6.0",
+   "libraft-cu13": "26.6.0"
+  },
+  "packages": {
+   "torch": "2.14.1+cu130",
+   "numpy": "1.26.4",
+   "pandas": "2.2.3",
+   "pyarrow": "23.0.1",
+   "xgboost": "3.4.1",
+   "scikit-learn": "1.6.1",
+   "snowballstemmer": "3.1.1"
+  }
+ },
+ "contract_exit_code": null,
+ "bm25": {
+  "k1": 0.036,
+  "b": {
+   "product_title": 0.742,
+   "product_brand": 0.675,
+   "product_color": 0.475,
+   "product_bullet_point": 0.619,
+   "product_description": 0.551
+  }
+ },
+ "bm25_file": {
+  "path": "referee/requests/bm25f-tuned.bm25.json",
+  "sha256": "d7affac28a409003d50c73877ae429b3a76d281922cf15ec1f2c0319ce1b4663"
+ },
+ "bm25_effective": {
+  "k1": 0.036,
+  "b": {
+   "product_title": 0.742,
+   "product_brand": 0.675,
+   "product_color": 0.475,
+   "product_bullet_point": 0.619,
+   "product_description": 0.551
+  }
+ },
+ "request_file": {
+  "path": "referee/requests/bm25f-tuned.json",
+  "sha256": "46c8b5432ac84fae8e442a2caed491fd21f93888ec396e3ec63a9a69ec26c372"
+ },
+ "tree_clean": true,
+ "build_mode": "parallel workers: no CUDA work before the build",
+ "label": "development only: the contract was skipped",
+ "dataset": "esci-us",
+ "split": "test",
+ "commit": "7673976",
+ "created": "2026-11-14T00:01:36Z",
+ "host": {
+  "cpus": 12,
+  "machine": "x86_64",
+  "python": "3.13.16",
+  "threads": {
+   "cpus_in_affinity_mask": 12,
+   "OPENBLAS_NUM_THREADS": "12",
+   "OMP_NUM_THREADS": "12",
+   "MKL_NUM_THREADS": "12",
+   "NUMEXPR_NUM_THREADS": "12",
+   "VECLIB_MAXIMUM_THREADS": "12",
+   "BLIS_NUM_THREADS": "12",
+   "numpy_loaded_before_pin": false
+  }
+ },
+ "n_queries": 8956,
+ "n_products": 1215854,
+ "request_template": {
+  "query": {
+   "multi_match": {
+    "query": "{{query}}",
+    "fields": [
+     "product_title^1.0",
+     "product_brand^0.126",
+     "product_color^0.14",
+     "product_bullet_point^0.06",
+     "product_description^0.036"
+    ]
+   }
+  }
+ },
+ "quality": {
+  "ndcg@10": 0.3039127040512092,
+  "n_ndcg@10": 8956,
+  "exact_recall@100": 0.5337671345373552,
+  "n_exact_recall@100": 8955,
+  "exact_recall@1000": 0.7415525795961351,
+  "n_exact_recall@1000": 8955
+ },
+ "latency_ms": {
+  "batch": 1,
+  "size": 10,
+  "n": 200,
+  "p50": 4.751920499984408,
+  "p99": 7.264851619456748,
+  "mean": 4.842132719954861
+ },
+ "stage_ms_p50": {
+  "parse": 0.093,
+  "retrieve": 3.1865,
+  "filter": 0.211,
+  "page": 1.089,
+  "total": 4.714499999999999
+ },
+ "throughput": {
+  "batch": 64,
+  "size": 10,
+  "qps": 348.6337256019718
+ },
+ "cost_per_million_queries": null,
+ "price_per_hour": null,
+ "build_s": 132.2023893759997,
+ "wall_s": 243.89706089999981,
+ "held_out": null,
+ "score_of_record": false,
+ "caveats": [
+  "no held-out draw scored (S3_SEARCH_HELD_OUT unset or missing; ask L-7)",
+  "the contract was skipped (--skip-contract): never a score of record"
+ ],
+ "freshness": {
+  "kind": "freshness",
+  "n_changes": 10000,
+  "batch": 100,
+  "visible": 8924,
+  "visible_ms": {
+   "p50": 0.05617900023935363,
+   "p99": 0.09140699967247201,
+   "max": 0.09140699967247201
+  },
+  "equal_to_rebuild": true,
+  "mismatches": [],
+  "failures": [],
+  "passed": true
+ },
+ "gates": {
+  "contract": true,
+  "freshness": true
+ }
+}

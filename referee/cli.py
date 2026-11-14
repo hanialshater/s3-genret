@@ -76,7 +76,11 @@ def run_baselines(dataset: str, out_dir: Path, k: int, device: str, systems=None
     meta = json.loads((out_dir / "s3search_meta.json").read_text())
     judg, cat_ids, tq = _scorer_inputs(dataset)
     record = {"kind": "genret-baselines", "dataset": dataset, "split": "test", "k": k, "created": _now(),
-              "label": DEV_LABEL if dataset == "esci-sample" else "baselines for the score of record (esci-us)",
+              "label": (f"DEVELOPMENT (esci-sample, device {device}): not a score of record; compare with esci-sample "
+                        f"numbers only") if dataset == "esci-sample" else
+                       (f"esci-us baselines, device {device}: development until scored inside the founder's "
+                        f"`referee full` (its results.json is the score of record)"),
+              "device": device,
               "s3search": pin, "sample_manifest_sha256": upstream.PIN["files"]["datasets/esci-sample.manifest.json"],
               "systems": {}}
     for name, m in meta.items():

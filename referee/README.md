@@ -99,7 +99,24 @@ sha256, both scores, the request and mapping, and the host.
 The dense bar is weak: it is the engine's v1 encoder, a small CPU model, and not a learned dense retriever. A GR claim
 that beats only the dense bar has not beaten the search floor. The bar is `bm25f-tuned`.
 
-The ESCI-US baselines (k 1000) are made in the founder's Colab, beside the full run (`colab_referee.ipynb`).
+**ESCI-US baselines** (all 8,956 test queries, 1,215,854 products, k 1000, Colab L4, s3-search `767397600d89`,
+made 2026-11-13T23:56:26Z by the steward). They are **development**: a score of record is the founder's `referee full`
+with the held-out draw. The records are in `baselines/esci-us/`: `baselines.json`, `s3search_meta.json`, and
+s3-search's own `referee full` of bm25f-tuned at the pin. The run files (146 MB) are not in git. They rebuild
+deterministically by `python -m referee baselines --dataset=esci-us --k=1000 --device=cuda`, and their sha256 are in
+`baselines.json`.
+
+| System | nDCG@10 | Exact recall@10 | Exact recall@100 | Exact recall@1000 |
+|---|---|---|---|---|
+| bm25f | 0.2487 | 0.2311 | 0.4834 | 0.7128 |
+| bm25f-tuned | **0.3039** | 0.2802 | 0.5338 | 0.7416 |
+| dense-tfidf-svd-128 | 0.0323 | 0.0276 | 0.0754 | 0.2018 |
+
+- bm25f-tuned equals s3-search's own bench score of the same run exactly, and s3-search's own `referee full` at the
+  pin (0.3039127, contract skipped, so not of record there either). It matches the prototype's 0.304.
+- On ESCI-US the TF-IDF+SVD dense bar is close to useless (0.032). The bar for GR1 and GR2 is bm25f-tuned.
+- On esci-sample, the cuda runs give the same metrics as the CPU runs, but their files differ (other sha256), most
+  likely in the order of tied products. Compare runs made on the same device.
 
 ## Commands
 
