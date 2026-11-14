@@ -134,10 +134,27 @@ def collate(batch, pad: int, max_len: int = 96):
     return ids, mask, labels
 
 
+def _backbone(model):
+    return getattr(model, getattr(model, "base_model_prefix", "model"), None) or model.model
+
+
+def _run(model, ids, mask):
+    pos = (mask.long().cumsum(1) - 1).clamp(min=0)        # positions count real tokens only (left padding)
+    return _backbone(model)(input_ids=ids, attention_mask=mask, position_ids=pos).last_hidden_state
+
+
 def lm_loss(model, ids, mask, labels):
-    out = model(input_ids=ids, attention_mask=mask)
-    logits = out.logits[:, :-1].float()
-    return F.cross_entropy(logits.reshape(-1, logits.shape[-1]), labels[:, 1:].reshape(-1), ignore_index=-100)
+    """Next-token loss on the completion only, applying the output head to the labelled positions alone (a full
+    [batch, length, 176k-token vocabulary] logit tensor does not fit next to a 0.6B model)."""
+    h = _run(model, ids, mask)[:, :-1]
+    y = labels[:, 1:]
+    sel = y != -100
+    logits = model.get_output_embeddings()(h[sel]).float()
+    return F.cross_entropy(logits, y[sel])
+
+
+def last_logits(model, ids, mask):
+    return model.get_output_embeddings()(_run(model, ids, mask)[:, -1])
 
 
 def train_lm(model, examples, steps: int, batch: int, lr: float, device: str, pad: int, warmup: int = 200,
@@ -208,8 +225,9 @@ def query_prompt(encode, vocab, q):
 
 
 def hidden_at_last(model, ids, mask):
-    out = model(input_ids=ids, attention_mask=mask, output_hidden_states=True)
-    return out.hidden_states[-1][:, -1]           # left-padded: the last position is <sid_start>
+    """The final hidden state (after the last norm) at the last position; prompts are left-padded, so that is
+    <sid_start>."""
+    return _run(model, ids, mask)[:, -1]
 
 
 def train_mtp(model, heads, encode, vocab, pairs_fn, steps: int, batch: int, device: str, pad: int, lr_heads=1e-3,
@@ -279,7 +297,7 @@ def decode_ar(model, encode, vocab, queries, trie, width: int, device: str, pad:
                 seqs.append(prompts[r // w] + [vocab.base + vocab.offsets[j] + int(prefixes[r, j]) for j in range(l)])
             ids, mask = left_pad(seqs, pad)
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
-                logits = model(input_ids=ids.to(device), attention_mask=mask.to(device)).logits[:, -1]
+                logits = last_logits(model, ids.to(device), mask.to(device))
             lo = vocab.base + vocab.offsets[l]
             return logits[:, lo:lo + ks[l]].float().log_softmax(-1), state
 
