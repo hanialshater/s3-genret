@@ -68,6 +68,8 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--name", default="gr1")
     ap.add_argument("--save-model", action="store_true")
+    ap.add_argument("--sid-lr", type=float, default=1e-2, help="lr of the code embeddings and head")
+    ap.add_argument("--shared-vocab", action="store_true", help="the first version: codes as T5 text tokens")
     ap.add_argument("--label", default="development only, never a claim")
     a = ap.parse_args(argv)
     torch.manual_seed(a.seed)
@@ -90,12 +92,13 @@ def main(argv=None):
     trie = SidTrie(codes, ids)
     log(f"{a.dataset}: {len(ids)} products, sid shape {codes.shape}, ks {ks}")
 
-    tok, model, vocab = gr1.make_model(a.model, ks)
+    tok, model, vocab = (gr1.make_model(a.model, ks) if a.shared_vocab else gr1.make_sid_model(a.model, ks))
     fit = ds.fit
     stream = gr1.ExampleStream(fit, ds.catalogue, codes, ids, index_share=0.0 if a.no_indexing else a.index_share,
                                seed=a.seed)
     hist = gr1.train(model, tok, vocab, stream,
-                     steps=a.steps, batch=a.batch, lr=a.lr, warmup=a.warmup, device=a.device, log=log)
+                     steps=a.steps, batch=a.batch, lr=a.lr, warmup=a.warmup, device=a.device, log=log,
+                     sid_lr=a.sid_lr)
     t_train = time.time() - t0
     fit_check = None
     if a.fit_check:

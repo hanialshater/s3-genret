@@ -93,6 +93,50 @@ def build_examples(fit, catalogue, codes, ids, epoch: int, indexing: bool = True
     return ex
 
 
+class SidT5(torch.nn.Module):
+    """A pretrained T5 whose decoder reads and writes semantic-id codes through its own embedding table and output
+    head (one row per (level, code), plus a start row), trained at their own learning rate. Sharing T5's tied text
+    vocabulary instead (the first version) learnt the new tokens too slowly: on ESCI-sample it had learnt nothing
+    query-specific after 16 epochs of the fit pairs (development run res-grdev4)."""
+
+    def __init__(self, name: str, ks):
+        super().__init__()
+        from transformers import T5ForConditionalGeneration
+        self.t5 = T5ForConditionalGeneration.from_pretrained(name)
+        d = self.t5.config.d_model
+        self.vocab = SidVocab(ks, 1)                    # row 0 is the decoder's start
+        self.sid_emb = torch.nn.Embedding(self.vocab.size + 1, d)
+        self.sid_head = torch.nn.Linear(d, self.vocab.size + 1)
+        torch.nn.init.normal_(self.sid_emb.weight, std=self.t5.shared.weight.std().item())
+        self.config = self.t5.config
+
+    def sid_parameters(self):
+        return list(self.sid_emb.parameters()) + list(self.sid_head.parameters())
+
+    def get_encoder(self):
+        return self.t5.get_encoder()
+
+    def decode_logits(self, enc_hidden, attention_mask, dec_ids):
+        out = self.t5.decoder(inputs_embeds=self.sid_emb(dec_ids), encoder_hidden_states=enc_hidden,
+                              encoder_attention_mask=attention_mask)
+        return self.sid_head(out.last_hidden_state)
+
+    def forward(self, input_ids, attention_mask, labels):
+        """labels: sid-vocab ids [B, L]; teacher forcing from the start row."""
+        h = self.t5.get_encoder()(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+        dec = torch.cat([torch.zeros_like(labels[:, :1]), labels[:, :-1]], 1)
+        logits = self.decode_logits(h, attention_mask, dec)
+        loss = torch.nn.functional.cross_entropy(logits.float().reshape(-1, logits.shape[-1]), labels.reshape(-1))
+        return type("Out", (), {"loss": loss, "logits": logits})
+
+
+def make_sid_model(name: str, ks):
+    from transformers import AutoTokenizer
+    tok = AutoTokenizer.from_pretrained(name)
+    model = SidT5(name, ks)
+    return tok, model, model.vocab
+
+
 def make_model(name: str, ks):
     from transformers import AutoTokenizer, T5ForConditionalGeneration
     tok = AutoTokenizer.from_pretrained(name)
@@ -104,10 +148,17 @@ def make_model(name: str, ks):
 
 
 def train(model, tok, vocab, epochs_examples, steps: int, batch: int = 256, lr: float = 1e-3, warmup: int = 1000,
-          device: str = "cpu", max_len: int = 64, log_every: int = 200, log=print):
-    """epochs_examples(epoch) -> list of examples. Runs `steps` optimizer steps, epoch after epoch."""
+          device: str = "cpu", max_len: int = 64, log_every: int = 200, log=print, sid_lr: float = 1e-2):
+    """epochs_examples(epoch) -> list of examples. Runs `steps` optimizer steps, epoch after epoch. A SidT5's own
+    code embeddings and head train at `sid_lr`, the pretrained T5 at `lr`."""
     model.to(device).train()
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    if isinstance(model, SidT5):
+        sid = set(map(id, model.sid_parameters()))
+        groups = [{"params": [p for p in model.parameters() if id(p) not in sid], "lr": lr},
+                  {"params": model.sid_parameters(), "lr": sid_lr, "weight_decay": 0.0}]
+        opt = torch.optim.AdamW(groups, weight_decay=0.01)
+    else:
+        opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda s: min((s + 1) / warmup, math.sqrt(warmup / max(s + 1, warmup))))
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
@@ -154,6 +205,13 @@ def retrieve(model, tok, vocab, queries, trie: SidTrie, width: int = 100, batch:
         def step(state, prefixes, l):
             h, m = state
             w = prefixes.shape[0] // B
+            if isinstance(model, SidT5):
+                dec = torch.zeros((prefixes.shape[0], l + 1), dtype=torch.long)
+                for j in range(l):
+                    dec[:, j + 1] = prefixes[:, j] + vocab.base + vocab.offsets[j]
+                lo = model.decode_logits(h.repeat_interleave(w, 0), m.repeat_interleave(w, 0), dec.to(device))
+                b0 = vocab.base + vocab.offsets[l]
+                return lo[:, -1, b0:b0 + ks[l]].float().log_softmax(-1), state
             dec = torch.full((prefixes.shape[0], l + 1), start, dtype=torch.long)
             for j in range(l):
                 dec[:, j + 1] = prefixes[:, j] + vocab.base + vocab.offsets[j]
