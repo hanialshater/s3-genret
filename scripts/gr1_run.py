@@ -54,7 +54,9 @@ def main(argv=None):
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--warmup", type=int, default=1000)
     ap.add_argument("--no-indexing", action="store_true")
-    ap.add_argument("--index-epochs", type=int, default=2, help="epochs that include the indexing task")
+    ap.add_argument("--index-share", type=float, default=0.64,
+                    help="share of every epoch that is indexing (the design's 2 indexing epochs to 6 retrieval)")
+    ap.add_argument("--fit-check", type=int, default=200, help="also decode n fit queries: is training learnt?")
     ap.add_argument("--random-ids", action="store_true")
     ap.add_argument("--unconstrained", action="store_true")
     ap.add_argument("--width", type=int, default=100)
@@ -90,11 +92,21 @@ def main(argv=None):
 
     tok, model, vocab = gr1.make_model(a.model, ks)
     fit = ds.fit
-    hist = gr1.train(model, tok, vocab,
-                     lambda e: gr1.build_examples(fit, ds.catalogue, codes, ids, e,
-                                                  indexing=(not a.no_indexing) and e < a.index_epochs, seed=a.seed),
+    stream = gr1.ExampleStream(fit, ds.catalogue, codes, ids, index_share=0.0 if a.no_indexing else a.index_share,
+                               seed=a.seed)
+    hist = gr1.train(model, tok, vocab, stream,
                      steps=a.steps, batch=a.batch, lr=a.lr, warmup=a.warmup, device=a.device, log=log)
     t_train = time.time() - t0
+    fit_check = None
+    if a.fit_check:
+        fq = fit.drop_duplicates("query_id").head(a.fit_check)
+        fres = gr1.retrieve(model, tok, vocab, fq["query"].tolist(), trie, width=20, batch=a.decode_batch,
+                            device=a.device)
+        exact = fit[fit["esci_label"] == "E"].groupby("query_id")["product_id"].apply(lambda x: set(map(str, x)))
+        hits = [len(set(gr1.to_ranked(r, trie, 10)) & exact.get(q, set())) > 0 for q, r in zip(fq["query_id"], fres)]
+        fit_check = {"n": len(hits), "share_with_an_exact_in_top10": sum(hits) / max(1, len(hits)),
+                     "note": "fit queries the model was trained on: a check that training is learnt, not a score"}
+        log(f"fit check: {fit_check}")
     tq = ds.test_queries
     if a.max_queries:
         tq = tq.head(a.max_queries)
@@ -111,7 +123,7 @@ def main(argv=None):
     runfile.write_run(out / "run.jsonl.gz", header, ranked)
     invalid = sum(e is None for r in ranked.values() for e in r[:10]) / max(1, sum(len(r[:10]) for r in ranked.values()))
     report = {"label": a.label, "args": vars(a), "ks": ks, "train_history": hist, "n_queries": len(ranked),
-              "own_top10_undecodable_share": invalid,
+              "own_top10_undecodable_share": invalid, "fit_check": fit_check,
               "seconds": {"train": round(t_train, 1), "decode": round(t_dec, 1),
                           "decode_per_query_ms": round(1000 * t_dec / max(1, len(ranked)), 1)},
               "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}

@@ -40,19 +40,55 @@ class SidVocab:
         return [self.base + self.offsets[l] + int(c) for l, c in enumerate(codes)]
 
 
-def build_examples(fit, catalogue, codes, ids, epoch: int, indexing: bool = True, seed: int = 0, s_rate=S_RATE):
-    """One epoch's (input text, codes) examples: retrieval pairs from the fit split (+ indexing, if asked)."""
-    rng = random.Random(seed * 1000 + epoch)
+def retrieval_pairs(fit, ids, codes, rng, s_rate=S_RATE):
     pos = {p: i for i, p in enumerate(ids)}
-    ex = []
+    out = []
     for q, p, l in zip(fit["query"], fit["product_id"], fit["esci_label"]):
         if l == "E" or (l == "S" and rng.random() < s_rate):
             i = pos.get(str(p))
             if i is not None:
-                ex.append((query_text(q), codes[i]))
+                out.append((query_text(q), codes[i]))
+    return out
+
+
+class ExampleStream:
+    """Epochs of examples: the retrieval pairs, mixed with indexing examples drawn from the catalogue so that indexing
+    is a fixed share of every epoch (`index_share`, 0 for arm A2). The catalogue is walked in a shuffled cycle, so
+    every product is indexed equally often and indexing is never front-loaded and then forgotten."""
+
+    def __init__(self, fit, catalogue, codes, ids, index_share: float = 0.64, seed: int = 0, s_rate=S_RATE):
+        self.fit, self.codes, self.ids, self.share, self.seed, self.s_rate = fit, codes, ids, index_share, seed, s_rate
+        self.index = [index_text(r) for r in catalogue.to_dict("records")] if index_share > 0 else []
+        self.order, self.cursor = [], 0
+        self.rng = random.Random(seed)
+
+    def _next_index(self, n):
+        out = []
+        while len(out) < n:
+            if self.cursor >= len(self.order):
+                self.order = list(range(len(self.index)))
+                self.rng.shuffle(self.order)
+                self.cursor = 0
+            i = self.order[self.cursor]
+            self.cursor += 1
+            out.append((self.index[i], self.codes[i]))
+        return out
+
+    def __call__(self, epoch: int):
+        rng = random.Random(self.seed * 1000 + epoch)
+        ex = retrieval_pairs(self.fit, self.ids, self.codes, rng, self.s_rate)
+        if self.share > 0:
+            ex += self._next_index(int(round(len(ex) * self.share / (1 - self.share))))
+        rng.shuffle(ex)
+        return ex
+
+
+def build_examples(fit, catalogue, codes, ids, epoch: int, indexing: bool = True, seed: int = 0, s_rate=S_RATE):
+    """One epoch with all of the catalogue indexed once (kept for tests and small runs)."""
+    rng = random.Random(seed * 1000 + epoch)
+    ex = retrieval_pairs(fit, ids, codes, rng, s_rate)
     if indexing:
-        for i, r in enumerate(catalogue.to_dict("records")):
-            ex.append((index_text(r), codes[i]))
+        ex += [(index_text(r), codes[i]) for i, r in enumerate(catalogue.to_dict("records"))]
     rng.shuffle(ex)
     return ex
 
