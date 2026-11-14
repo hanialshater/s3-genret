@@ -59,6 +59,8 @@ def main(argv=None):
     ap.add_argument("--fit-check", type=int, default=200, help="also decode n fit queries: is training learnt?")
     ap.add_argument("--random-ids", action="store_true")
     ap.add_argument("--unconstrained", action="store_true")
+    ap.add_argument("--also-unconstrained", action="store_true",
+                    help="arm A4: also decode the same model without the trie, to run-unconstrained.jsonl.gz")
     ap.add_argument("--width", type=int, default=100)
     ap.add_argument("--k", type=int, default=100)
     ap.add_argument("--decode-batch", type=int, default=32)
@@ -132,6 +134,20 @@ def main(argv=None):
               "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "gr1.json").write_text(json.dumps(report, indent=1) + "\n")
     log(json.dumps({k: report[k] for k in ("n_queries", "own_top10_undecodable_share", "seconds")}))
+    if a.also_unconstrained:
+        t1 = time.time()
+        ures = gr1.retrieve(model, tok, vocab, tq["query"].tolist(), trie, width=a.width, batch=a.decode_batch,
+                            device=a.device, unconstrained=True)
+        uranked = {int(q): gr1.to_ranked(r, trie, a.k) for q, r in zip(tq["query_id"], ures)}
+        uheader = dict(header, name=a.name + "-unconstrained",
+                       system=header["system"].replace("constrained=True", "constrained=False (arm A4)"))
+        runfile.write_run(out / "run-unconstrained.jsonl.gz", uheader, uranked)
+        report["unconstrained"] = {
+            "own_top10_undecodable_share": sum(e is None for r in uranked.values() for e in r[:10])
+            / max(1, sum(len(r[:10]) for r in uranked.values())),
+            "decode_seconds": round(time.time() - t1, 1)}
+        (out / "gr1.json").write_text(json.dumps(report, indent=1) + "\n")
+        log(f"unconstrained: {report['unconstrained']}")
     if a.save_model:
         torch.save(model.state_dict(), out / "model.pt")
 
