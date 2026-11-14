@@ -24,7 +24,7 @@ def main():
     la, lb = gzip.open(ma, "rt").read().splitlines(), gzip.open(mb, "rt").read().splitlines()
     rep = {"embeddings_identical": bool(np.array_equal(xa, xb)), "embeddings_max_abs_diff": float(np.abs(xa - xb).max()),
            "sid_map_sha256": [sha(ma), sha(mb)], "sid_maps_identical": sha(ma) == sha(mb),
-           "rows_agreeing": sum(x == y for x, y in zip(la, lb)) / max(1, len(la) - 1)}
+           "rows_agreeing": sum(x == y for x, y in zip(la[1:], lb[1:])) / max(1, len(la) - 1)}
     print(json.dumps(rep), flush=True)
     Path(ob).joinpath("compare.json").write_text(json.dumps(rep, indent=1) + "\n")
     if "--require-identical" in sys.argv and not rep["sid_maps_identical"]:
