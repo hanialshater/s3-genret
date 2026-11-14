@@ -8,3 +8,8 @@ results.json
 results-dev.json
 baselines-esci-us/
 checkpoints/
+# researcher
+results/
+.pytest_cache/
+*.pt
+*.npy
