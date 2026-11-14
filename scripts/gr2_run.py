@@ -120,7 +120,9 @@ def main(argv=None):
     pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
     eos = tok.eos_token_id
     enc = lambda t: tok(t, add_special_tokens=False)["input_ids"]  # noqa: E731
-    ex = gr2.Examples(enc, vocab, cat, codes, ids, fit, eos=eos, seed=a.seed)
+    enc_batch = lambda ts: tok(ts, add_special_tokens=False)["input_ids"]  # noqa: E731
+    ex = gr2.Examples(enc, vocab, cat, codes, ids, fit, eos=eos, seed=a.seed, encode_batch=enc_batch)
+    log("catalogue tokenised")
     rng = random.Random(a.seed)
     n = len(ids)
 

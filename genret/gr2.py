@@ -69,15 +69,19 @@ def _arr(x):
 class Examples:
     """Builds (input ids, number of prompt tokens) examples. The loss is on the tokens after the prompt."""
 
-    def __init__(self, encode, vocab: Vocab, catalogue, codes, ids, fit, eos: int, seed: int = 0):
+    def __init__(self, encode, vocab: Vocab, catalogue, codes, ids, fit, eos: int, seed: int = 0, encode_batch=None):
         self.enc, self.v, self.codes, self.ids, self.fit, self.eos = encode, vocab, codes, ids, fit, eos
         self.rows = catalogue.to_dict("records")
+        self.attr_ids = self.title_ids = None
+        if encode_batch is not None:                     # one batched (parallel) tokenizer call per field
+            self.attr_ids = [x[:64] for x in encode_batch([attr_text(r) for r in self.rows])]
+            self.title_ids = [x[:48] for x in encode_batch([_clean(r.get("product_title"))[:200] for r in self.rows])]
         self.pos = {p: i for i, p in enumerate(ids)}
         self.rng = random.Random(seed)
         self._attr = None
 
     def attr(self, i):
-        p = self.enc(attr_text(self.rows[i]))[:64]
+        p = list(self.attr_ids[i]) if self.attr_ids is not None else self.enc(attr_text(self.rows[i]))[:64]
         sp = self.v.special
         return p + [sp["sid_start"]], self.v.sid(self.codes[i]) + [sp["sid_end"]]
 
@@ -88,7 +92,8 @@ class Examples:
     def sid_to_title(self, i):
         sp = self.v.special
         prompt = [sp["sid_start"]] + self.v.sid(self.codes[i]) + [sp["sid_end"], sp["title"]]
-        target = self.enc(_clean(self.rows[i].get("product_title"))[:200])[:48] + [self.eos]
+        t = list(self.title_ids[i]) if self.title_ids is not None else self.enc(_clean(self.rows[i].get("product_title"))[:200])[:48]
+        target = t + [self.eos]
         return _arr(prompt + target), len(prompt)
 
     def query_pairs(self, epoch: int):
